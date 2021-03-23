@@ -27,8 +27,8 @@ Js.log(max)
 
 let sortedList = lines
   ->Belt.Array.map(seatToNumber)
+  ->Belt.SortArray.stableSortBy((a, z) => a - z)
   ->Belt.List.fromArray
-  ->Belt.List.sort((a, z) => a - z)
 
 let mine = sortedList
   ->Belt.List.tailExn
