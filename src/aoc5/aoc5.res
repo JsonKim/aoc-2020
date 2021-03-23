@@ -21,6 +21,6 @@ let seatToNumber = (line) => {
 
 let max = lines
   ->Belt.Array.map(seatToNumber)
-  ->Belt.Array.reduce(0, Js.Math.max_int)
+  ->Js.Math.maxMany_int
 
 Js.log(max)
