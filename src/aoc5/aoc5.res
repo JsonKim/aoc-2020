@@ -30,14 +30,25 @@ let sortedList = lines
   ->Belt.SortArray.stableSortBy((a, z) => a - z)
   ->Belt.List.fromArray
 
+let slidingWindow = (l, n) => {
+  let rec go = (l, n, result) => {
+    switch (l->Belt.List.take(n), l->Belt.List.tail) {
+    | (Some(xs), Some(t)) => list{xs, ...go(t, n, result)}
+    | _ => result
+    }
+  }
+
+  go(l, n, list{})
+}
+
 let mine = sortedList
-  ->Belt.List.tailExn
-  ->Belt.List.reduce((sortedList->Belt.List.headExn, list{}), ((prev, acc), curr) => {
-    (curr, list{(prev, curr), ...acc})
-  })
-  ->((_, acc)) => acc
-  ->Belt.List.keep(((prev, curr)) => (curr - prev) > 1)
-  ->Belt.List.headExn
-  ->((prev, _)) => prev + 1
+  ->slidingWindow(2)
+  ->Belt.List.getBy((pair) =>
+      switch pair {
+      | list{x1, x2} => x2 - x1 > 1
+      | _ => false
+      })
+  ->Belt.Option.flatMap(x => Belt.List.head(x))
+  ->Belt.Option.map(x => x + 1)
 
 Js.log(mine)
