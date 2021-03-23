@@ -2,9 +2,9 @@ let input = Node.Fs.readFileAsUtf8Sync("src/aoc5/input.txt");
 
 let lines = input->Js.String2.split("\n")
 
-let calculate = (seat, one) => {
+let decode = (seat, one) => {
   let fn = ((exp, sum), item) =>
-    (exp*2, sum + if item === one { exp } else { 0 } )
+    (exp * 2, sum + (item === one ? exp : 0 ))
 
   let (_, sum) = seat->Js.String2.split("")->Belt.Array.reduceReverse((1, 0), fn)
   sum
@@ -15,7 +15,7 @@ let seatToNumber = (line) => {
   switch seat {
   | None => 0
   | Some(arr) => 
-    arr[1]->calculate("B") * 8 + arr[2]->calculate("R")
+    arr[1]->decode("B") * 8 + arr[2]->decode("R")
   }
 }
 
