@@ -24,3 +24,20 @@ let max = lines
   ->Js.Math.maxMany_int
 
 Js.log(max)
+
+let sortedList = lines
+  ->Belt.Array.map(seatToNumber)
+  ->Belt.List.fromArray
+  ->Belt.List.sort((a, z) => a - z)
+
+let mine = sortedList
+  ->Belt.List.tailExn
+  ->Belt.List.reduce((sortedList->Belt.List.headExn, list{}), ((prev, acc), curr) => {
+    (curr, list{(prev, curr), ...acc})
+  })
+  ->((_, acc)) => acc
+  ->Belt.List.keep(((prev, curr)) => (curr - prev) > 1)
+  ->Belt.List.headExn
+  ->((prev, _)) => prev + 1
+
+Js.log(mine)
