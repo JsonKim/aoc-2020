@@ -13,25 +13,27 @@ type passwordWithPolicy = {
   password: string,
 }
 
-
-let toInt = s => s->Option.mapWithDefault(0, s => s->Int.fromString->Option.getWithDefault(0))
-
-let deserialize = line =>
+let parse = line =>
   line
     ->Js.String2.match_(%re("/^([0-9]+)-([0-9]+) ([a-z]): (.*)$/"))
-    ->Option.mapWithDefault({ lowest: 0, highest: 0, letter: " ", password: "" }, (x) => {
-      lowest: x[1]->toInt,
-      highest: x[2]->toInt,
-      letter: x[3]->Option.getWithDefault(" "),
-      password: x[4]->Option.getWithDefault(""),
+    ->Option.flatMap((x) => switch x {
+    | [_, l, h, letter, password] => Some({
+      lowest: l->Int.fromString->Option.getExn,
+      highest: h->Int.fromString->Option.getExn,
+      letter,
+      password,
     })
+    | _ => None
+   })
+
+let validate = (arr, validator) => arr
+  ->Array.keep(validator)
+  ->Array.length
 
 let count = (input, validator) => input
   ->Js.String2.split("\n")
-  ->Array.map(deserialize)
-  ->Array.map(validator)
-  ->Array.keep(id)
-  ->Array.length
+  ->Array.keepMap(parse)
+  ->validate(validator)
 
 let isValidForPart1 = (p) => {
   let letters = p.password->Js.String2.split("")->Array.keep(x => x == p.letter)
