@@ -2,83 +2,78 @@ open Belt
 
 let input = Node.Fs.readFileAsUtf8Sync("src/aoc7/input.txt")
 
-type rec tree<'a> = {
-  value: 'a,
-  forest: list<tree<'a>>
-}
+let input1 = `light red bags contain 1 bright white bag, 2 muted yellow bags.
+dark orange bags contain 3 bright white bags, 4 muted yellow bags.
+bright white bags contain 1 shiny gold bag.
+muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.
+shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.
+dark olive bags contain 3 faded blue bags, 4 dotted black bags.
+vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.
+faded blue bags contain no other bags.
+dotted black bags contain no other bags.`
 
-let make = (value, forest) => { value, forest }
+let map2 = (a, b, f) => a->Option.flatMap(a => b->Option.map(b => f(a, b)))
 
-let append = ({ value, forest }, tree) => make(value, list{ tree, ...forest })
+let findA = s =>
+  s->Js.String2.match_(%re("/^(.+) bags contain/"))
 
-let rec elem = (fa, a) =>
-  a == fa.value
-  ? true
-  : fa.forest->List.some((tree) => tree->elem(a))
+let findB = s =>
+  s->Js.String2.match_(%re("/(([0-9]+) ([^.,]+)|no other) bags?[,.]/g"))
 
-let rec find = (fa, a) =>
-  a == fa.value
-  ? Some(fa)
-  : fa.forest->List.reduce(None, (acc, tree) => acc != None ? acc : tree->find(a))
+let containedBags = arr => arr
+  ->Array.map(s => s
+    ->Js.String2.match_(%re("/([0-9]+) (.*) bags?[,.]/"))
+    ->Option.flatMap(arr => map2(arr[1], arr[2], (count, color) =>  {
+      (count->Int.fromString->Option.getExn, color)
+    }))
+    ->Option.getWithDefault((0, "no other"))
+  )
 
-let rec draw = (forest, indentation) => {
-  let len = forest->List.length
+let parseLine = (line) => line
+  ->((line) => (line->findA, line->findB))
+  ->(((a, b)) => a->Option.flatMap(a => map2(a[0], b, (a, b) => 
+    (a->Js.String2.replace(" bags contain", ""), b->containedBags)
+  )))
+  ->Option.getWithDefault(("no other", []))
 
-  forest->List.reduceWithIndex("", (r, tree, i) => {
-    let isLast = i === len - 1
-    r ++ indentation ++ (isLast ? `└` : `├`) ++ `─ ` ++ tree.value
-      ++ tree.forest->draw(indentation ++ (len > 1 && !isLast ? `│  ` : `   `))
-   })
-}
+let toDict = arr => arr->Array.reduce(Map.String.empty, (acc, (contained, colors)) =>
+  colors->Array.reduce(acc, (acc, (_count, color)) =>
+    acc->Map.String.update(color, (x) =>
+      Some([contained]->Array.concat(x->Option.getWithDefault([]))))))
 
-let drawForest = (forest) => forest->draw("\n")
+let rec traverse = (bags: Map.String.t<array<string>>, target: string, acc: Set.String.t) => bags
+  ->Map.String.get(target)
+  ->Option.mapWithDefault(acc, contained => contained->Array.reduce(acc, (acc, x) => {
+    traverse(bags, x, acc->Set.String.add(x))
+  }))
 
-let drawTree = (tree) => tree.value ++ drawForest(tree.forest)
+let parsed = input1
+  ->Js.String2.split("\n")
+  ->Array.map(parseLine)
+  ->toDict
 
-let rec map = (fa, f) => {
-  value: f(fa.value),
-  forest: fa.forest->List.map(tree => tree->map(f))
-}
+let part1 = parsed->traverse("shiny gold", Set.String.empty)->Set.String.size
+Js.log(part1)
 
-let fold = (tree, f) => {
-  let rec go = (tree) => f(tree.value, tree.forest->List.map(go))
-  go(tree)
-}
+let toDict = arr => arr->Array.reduce(Map.String.empty, (acc, (contained, colors)) =>
+  acc->Map.String.set(contained, colors)
+)
 
-let rec reduce = (fa, b, f) =>
-  fa.forest->List.reduce(f(b, fa.value), (acc, tree) => tree->reduce(acc, f))
+let rec traverse = (bags: Map.String.t<array<(int, string)>>, target: string, init: int) => bags
+  ->Map.String.get(target)
+  ->Option.mapWithDefault(init, contain => contain->Array.reduceReverse(init, (acc, (count, color)) => {
+    if color == "no other" {
+      0
+    } else {
+      acc + count + count * (bags->traverse(color, init));
+    }
+  }))
 
-let t = {
-  value: "1",
-  forest: list{
-    {
-      value: "2",
-      forest: list{
-        {
-          value: "3",
-          forest: list{
-            { value: "4", forest: list{} },
-            { value: "5", forest: list{} },
-            { value: "6", forest: list{} },
-            { value: "7", forest: list{} },
-          }
-        }
-      }
-    },
-    { value: "22", forest: list{} }
-  }
-}
+let parsed = input
+  ->Js.String2.split("\n")
+  ->Array.map(parseLine)
+  ->toDict
 
-/*
-let root = make("empty", list{})
+let part2 = parsed->traverse("shiny gold", 0)
+Js.log(part2)
 
-Js.log(root
-  ->insert("bright white", "light red")
-  ->insert("muted yellow", "light red")
-  ->insert("bright white", "dark orange")
-  ->insert("muted yellow", "dark orange")
-  ->insert("shiny gold", "bright white")
-  ->insert("shiny gold", "muted yellow")
-  ->drawTree)
-*/
-Js.log(t->find("2"))
