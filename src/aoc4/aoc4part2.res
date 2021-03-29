@@ -46,7 +46,9 @@ let parseHeight = lift((s) => parseWithRe("^[0-9]{2,3}(cm|in)$", s)
         : parseInt(59, 76, x)
   ))
 
-let keys = list{"byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"}
+let parseCid = lift(s => Some(s))
+
+let keys = list{"byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid", "cid"}
 
 let findKeyRegEx = k => Js.Re.fromString("(^| |\\n)("++k++"):(.[^ \\n]*)")
 
@@ -68,25 +70,36 @@ let data = input
 let const = (x, _) => x
 let parse = (prop, decode, x) => Some(x)->req(prop, decode, x, const)
 
+type height = Cm(int) | In(int)
+
 type passport = {
-  byr: string,
-  iyr: string,
-  eyr: string,
-  hgt: string,
+  byr: int,
+  iyr: int,
+  eyr: int,
+  hgt: height,
   hcl: string,
   ecl: string,
   pid: string,
+  cid: option<string>,
 }
 
-let dictToPassport = x => ({
-  byr: x->Js.Dict.unsafeGet("bry"),
-  iyr: x->Js.Dict.unsafeGet("iyr"),
-  eyr: x->Js.Dict.unsafeGet("eyr"),
-  hgt: x->Js.Dict.unsafeGet("hgt"),
-  hcl: x->Js.Dict.unsafeGet("hcl"),
-  ecl: x->Js.Dict.unsafeGet("ecl"),
-  pid: x->Js.Dict.unsafeGet("pid"),
-})
+let dictToPassport = x => {
+  let toInt = key => x->Js.Dict.unsafeGet(key)->Int.fromString->Option.getExn
+
+  {
+    byr: toInt("byr"),
+    iyr: toInt("iyr"),
+    eyr: toInt("eyr"),
+    hgt: x->Js.Dict.unsafeGet("hgt")->((x) => {
+      let height = x->Int.fromString->Option.getExn
+      %re("/cm$/")->Js.Re.test_(x) ? Cm(height) : In(height)
+    }),
+    hcl: x->Js.Dict.unsafeGet("hcl"),
+    ecl: x->Js.Dict.unsafeGet("ecl"),
+    pid: x->Js.Dict.unsafeGet("pid"),
+    cid: x->Js.Dict.get("cid"),
+  }
+}
 
 let passportSchema1 = data
   =>parse("byr", parseBirthYear, data)
@@ -96,6 +109,7 @@ let passportSchema1 = data
   ->Option.flatMap(parse("hcl", parseHexColor))
   ->Option.flatMap(parse("ecl", parseEyeColor))
   ->Option.flatMap(parse("pid", parsePid))
+  ->Option.flatMap(parse("cid", parseCid))
   ->Option.map(dictToPassport)
 
 let passportParser = list{
@@ -106,6 +120,7 @@ let passportParser = list{
   ("hcl", parseHexColor),
   ("ecl", parseEyeColor),
   ("pid", parsePid),
+  ("cid", parseCid),
  }
 
 let passportSchema2 = data => passportParser
