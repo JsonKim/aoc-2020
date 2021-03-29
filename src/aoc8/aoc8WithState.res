@@ -52,13 +52,11 @@ let update = (input, s: machine) => {
   }
 }
 
-let simulateMachine = (inputs: list<input>): state<machine, list<machine>> => {
-  let actions = inputs->List.map(i => s =>
-    flatMap(get(), s =>
-      map(modify(update(i)), _ =>
-        s))(s))
+let simulateMachine = (inputs: list<input>): state<machine, list<machine>> => s => {
+  let inputs = inputs->List.toArray
+  let x = inputs[s.pos]->Option.map(update)
 
-  sequence(actions)
+  s
 }
 
 let instructions = list{
