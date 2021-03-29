@@ -2,7 +2,7 @@ open Belt
 
 let input = Node.Fs.readFileAsUtf8Sync("src/aoc8/input.txt")
 
-type instruction = Acc(int) | Jmp (int) | Nop(int)
+type instruction = Acc(int) | Jmp(int) | Nop(int)
 type nextInst = Terminate | Pos(int)
 
 let parseLine = (s) => s
