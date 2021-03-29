@@ -3,7 +3,7 @@ open Belt
 let input = Node.Fs.readFileAsUtf8Sync("src/aoc8/input.txt")
 
 type instruction = Acc(int) | Jmp (int) | Nop(int)
-type instructions = array<instruction>
+type nextInst = Terminate | Pos(int)
 
 let parseLine = (s) => s
   ->Js.String2.match_(%re("/^(nop|acc|jmp) ([+-][0-9]+)$/"))
@@ -20,7 +20,11 @@ let parseLine = (s) => s
   ->Option.getExn
 
 let execute = (instructions, (pos, acc)) => {
-  let next = x => mod((pos + x), instructions->Array.length)
+  let len = instructions->Array.length
+  let next = x =>
+    (pos == len - 1)
+      ? Terminate
+      : Pos(mod(pos + x, len))
 
   instructions->Array.get(pos)->Option.map(instruction => switch instruction {
   | Acc(x) => (next(1), acc + x)
@@ -33,9 +37,10 @@ let program = (instructions) => {
   let rec go = (last, pos, acc) => {
     instructions
     ->execute((pos, acc))
-    ->Option.mapWithDefault(acc, (next) => switch next {
-    | (pos, _) if last->Set.Int.has(pos) => acc
-    | (pos, acc) => go(last->Set.Int.add(pos), pos, acc)
+    ->Option.mapWithDefault((Pos(pos), acc), (next) => switch next {
+    | (Terminate, _) => next
+    | (Pos(pos), acc) if last->Set.Int.has(pos) => (Pos(pos), acc)
+    | (Pos(pos), acc) => go(last->Set.Int.add(pos), pos, acc)
     })
   }
 
