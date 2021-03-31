@@ -23,15 +23,15 @@ let lift3 = (f: ('a, 'b, 'c) => 'd) => (oa, ob, oc) =>
 let lift4 = (f: ('a, 'b, 'c, 'd) => 'e) => (oa, ob, oc, od) =>
   f->lift3(oa, ob, oc)->apply(od)
 
-let find = (x, ys, target) => ys
+let find = (target, x, ys) => ys
   ->List.getBy(y => (x->Int.toFloat +. y->Int.toFloat) == target->Int.toFloat)
   ->Option.map(_ => target)
 
-let rec run = (xs: list<int>, target, f): option<int> => {
+let rec run = (xs: list<int>, f): option<int> => {
   let f = (x, ys) =>
-    switch f(x, ys, target) {
+    switch f(x, ys) {
     | Some(s) => Some(s)
-    | None => run(ys, target, f)
+    | None => run(ys, f)
     }
 
   lift2(f, xs->List.head, xs->List.tail)->join
@@ -40,7 +40,7 @@ let rec run = (xs: list<int>, target, f): option<int> => {
 let rec attack = (xs: list<int>) => {
   let f = (x, ys) => 
     ys->List.take(25)->Option.flatMap(zs =>
-      switch run(zs, x, find) {
+      switch run(zs, find(x)) {
       | Some(_) => attack(ys)
       | None => Some(x)
       }
