@@ -1,5 +1,7 @@
 open Belt
 
+let id = a => a
+
 let map2 = (oa, ob, f) =>
   oa->Option.flatMap(a =>
     ob->Option.map(b =>
@@ -9,6 +11,8 @@ let apply = (mf, ma) => switch mf {
 | Some(f) => ma->Option.map(f)
 | None => None
 }
+
+let join = (mma) => mma->Option.flatMap(id)
 
 let lift2 = (f: ('a, 'b) => 'c) => (oa, ob) =>
   oa->Option.map(f)->apply(ob)
@@ -30,7 +34,7 @@ let rec run = (xs: list<int>, target, f): option<int> => {
     | None => run(ys, target, f)
     }
 
-  lift2(f, xs->List.head, xs->List.tail)->Option.flatMap(x => x)
+  lift2(f, xs->List.head, xs->List.tail)->join
 }
 
 let rec attack = (xs: list<int>) => {
@@ -42,7 +46,7 @@ let rec attack = (xs: list<int>) => {
       }
     )
 
-  lift2(f, xs->List.head, xs->List.tail)->Option.flatMap(x => x)
+  lift2(f, xs->List.head, xs->List.tail)->join
 }
 
 let input = Node.Fs.readFileAsUtf8Sync("src/aoc9/input.txt")
