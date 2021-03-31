@@ -25,21 +25,21 @@ let find = (x, ys, target) => ys
 
 let rec run = (xs: list<int>, target, f): option<int> => {
   let f = (x, ys) =>
-      switch f(x, ys, target) {
-      | Some(s) => Some(s)
-      | None => run(ys, target, f)
-      }
+    switch f(x, ys, target) {
+    | Some(s) => Some(s)
+    | None => run(ys, target, f)
+    }
 
   lift2(f, xs->List.head, xs->List.tail)->Option.flatMap(x => x)
 }
 
 let rec attack = (xs: list<int>) => {
   let f = (x, ys) => 
-      ys->List.take(25)->Option.flatMap(zs =>
-        switch run(zs, x, find) {
-        | Some(_) => attack(ys)
-        | None => Some(x)
-        }
+    ys->List.take(25)->Option.flatMap(zs =>
+      switch run(zs, x, find) {
+      | Some(_) => attack(ys)
+      | None => Some(x)
+      }
     )
 
   lift2(f, xs->List.head, xs->List.tail)->Option.flatMap(x => x)
@@ -56,19 +56,26 @@ let weak = xs->List.reverse->attack->Option.getExn->Int.toFloat
 let f = (xs) => xs->List.reduce((0., list{}), ((s, l), x) => {
   if (s == weak) {
     (s, l)
-  } else if (s > weak) {
-    l->List.head->Option.flatMap(h =>
-      l->List.tail->Option.map(t =>
-        (s -. h->Int.toFloat, t)
-      ))
-      ->Option.getWithDefault((s, l))
   } else {
-    (s +. x->Int.toFloat, l->List.concat(list{x}))
+    let s = s +. x
+    let l = l->List.concat(list{x})
+
+    if (s < weak) {
+      (s, l)
+    } else {
+      let rec go = (s, l) => {
+        map2(l->List.head, l->List.tail, (h, t) => {
+          let s = s -. h
+          s > weak ? go(s, t) : (s, t)
+        })
+        ->Option.getWithDefault((s, l))
+      }
+
+      go(s, l)
+    }
   }
 })
-->(((_, l)) => {
-  let arr = l->List.toArray
-  arr->Js.Math.maxMany_int->Int.toFloat +. arr->Js.Math.maxMany_int->Int.toFloat
-})
+->(((_, l)) => l->List.toArray)
+->(l => l->Js.Math.minMany_float +. l->Js.Math.maxMany_float)
 
-Js.log(xs->f)
+Js.log(xs->List.map(Int.toFloat)->f)
