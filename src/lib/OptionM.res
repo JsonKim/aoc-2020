@@ -4,6 +4,8 @@ include Option
 
 let id = a => a
 
+let unit = a => Some(a)
+
 let map2 = (oa, ob, f) =>
   oa->flatMap(a =>
     ob->map(b =>
